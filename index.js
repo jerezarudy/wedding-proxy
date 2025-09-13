@@ -16,9 +16,16 @@ await client.connect();
 
 app.get("/get/:key", async (req, res) => {
   try {
-    const v = await client.json.get(req.params.key);
+    const key = req.params.key;
+    const v = await client.json.get(key);
 
-    let data = v.find((item) => item.id == req.query.id);
+    let id = req.query.id;
+    let data;
+    if (id == "all") {
+      data = v;
+    } else {
+      data = v.find((item) => item.id == id);
+    }
 
     if (!data) {
       return res.status(404).json({ error: "Not found" });

@@ -1,8 +1,12 @@
 import express from "express";
 import { createClient } from "redis";
+import cors from "cors";
 
 const app = express();
 app.use(express.json());
+
+// OR allow a single origin (recommended)
+app.use(cors());
 
 const client = createClient({
   username: "default",
@@ -16,6 +20,7 @@ await client.connect();
 
 app.get("/get/:key", async (req, res) => {
   try {
+    console.log("test");
     const key = req.params.key;
     const v = await client.json.get(key);
 

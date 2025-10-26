@@ -43,6 +43,7 @@ app.get("/get/:key", async (req, res) => {
 });
 app.post("/set/:key", async (req, res) => {
   try {
+    console.log("post");
     const key = req.params.key;
     const v = await client.json.get(key);
 
@@ -64,6 +65,32 @@ app.post("/set/:key", async (req, res) => {
     let message = isUpdate
       ? "Data updated successfully."
       : "Data added successfully.";
+    res.status(200).json({ message });
+  } catch (error) {
+    console.error("Error in /set/:key", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/delete/:key", async (req, res) => {
+  try {
+    console.log("post");
+    const key = req.params.key;
+    let v = await client.json.get(key);
+
+    let data = v.find((item) => item.id == req.body.id);
+
+    let finalData = v.filter((item) => item.id != req.body.id);
+
+    let isUpdate = false;
+    // if found update if not found add
+    if (data) {
+      v = finalData;
+    }
+
+    //   const { key, value } = req.body;
+    await client.json.set(key, "$", v);
+    let message = "Data deleted successfully.";
     res.status(200).json({ message });
   } catch (error) {
     console.error("Error in /set/:key", error);

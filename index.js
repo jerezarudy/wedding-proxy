@@ -94,7 +94,7 @@ app.post("/setv2/:key", async (req, res) => {
     const key = req.params.key;
     const v = await client.json.get(key);
 
-    let data = true; //v.find((item) => item.id == req.body.id);
+    let data = false; //v.find((item) => item.id == req.body.id);
 
     let isUpdate = false;
     // if found update if not found add

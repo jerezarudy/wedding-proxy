@@ -88,6 +88,37 @@ app.post("/set/:key", async (req, res) => {
   }
 });
 
+app.post("/setv2/:key", async (req, res) => {
+  try {
+    console.log("post");
+    const key = req.params.key;
+    const v = await client.json.get(key);
+
+    let data = true; //v.find((item) => item.id == req.body.id);
+
+    let isUpdate = false;
+    // if found update if not found add
+    if (data) {
+      data = { ...data, ...req.body };
+      const index = v.findIndex((item) => item.id == req.body.id);
+      v[index] = data;
+      isUpdate = true;
+    } else {
+      v.push(req.body);
+    }
+
+    //   const { key, value } = req.body;
+    await client.json.set(key, "$", v);
+    let message = isUpdate
+      ? "Data updated successfully."
+      : "Data added successfully.";
+    res.status(200).json({ message });
+  } catch (error) {
+    console.error("Error in /set/:key", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.post("/delete/:key", async (req, res) => {
   try {
     console.log("post");

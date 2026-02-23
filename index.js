@@ -1,6 +1,14 @@
+import "dotenv/config";
 import express from "express";
 import { createClient } from "redis";
 import cors from "cors";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import crypto from "crypto";
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+});
 
 const app = express();
 app.use(express.json());
@@ -8,12 +16,20 @@ app.use(express.json());
 // OR allow a single origin (recommended)
 app.use(cors());
 
+const redisPassword =
+  process.env.REDIS_PASSWORD || "xUC0ZneFaNLRAJldOTd1qGPAmvwb1Ksh";
+if (!process.env.REDIS_PASSWORD) {
+  console.warn("REDIS_PASSWORD not set; using fallback from source code.");
+}
+
 const client = createClient({
-  username: "default",
-  password: "xUC0ZneFaNLRAJldOTd1qGPAmvwb1Ksh",
+  username: process.env.REDIS_USERNAME || "default",
+  password: redisPassword,
   socket: {
-    host: "redis-18237.c256.us-east-1-2.ec2.redns.redis-cloud.com",
-    port: 18237,
+    host:
+      process.env.REDIS_HOST ||
+      "redis-18237.c256.us-east-1-2.ec2.redns.redis-cloud.com",
+    port: process.env.REDIS_PORT ? Number(process.env.REDIS_PORT) : 18237,
   },
 });
 await client.connect();
@@ -95,6 +111,41 @@ app.post("/delete/:key", async (req, res) => {
   } catch (error) {
     console.error("Error in /set/:key", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/s3-sign", async (req, res) => {
+  try {
+    const { fileName, fileType, folder } = req.body;
+
+    if (!fileName || !fileType) {
+      return res.status(400).json({ error: "Missing file info" });
+    }
+
+    const ext = fileName.split(".").pop();
+    const key = `${folder || "uploads"}/${crypto.randomUUID()}.${ext}`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: key,
+      ContentType: fileType,
+    });
+
+    const uploadUrl = await getSignedUrl(s3, command, {
+      expiresIn: 60,
+    });
+
+    const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    console.log({ uploadUrl, fileUrl, key });
+
+    res.json({
+      uploadUrl,
+      fileUrl,
+      key,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to sign url" });
   }
 });
 
